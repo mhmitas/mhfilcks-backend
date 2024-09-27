@@ -4,45 +4,56 @@ import { User } from "../../models/user.model.js";
 import { ApiError } from "../../utils/apiError.js";
 import { ApiResponse } from "../../utils/apiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
-import { uploadFileOnCloudinary } from "../../utils/uploadFileOnCloudinary.js";
 
 
 // register user
-export const registerUser = asyncHandler(async (req, res) => {
-    // get all userData from req.body 
-    const { fullName, username, email, password } = req.body;
-    // check if all data exists. if not throw error
-    if (!fullName || !username || !email || !password) {
-        throw new ApiError(400, "All Fields are Required")
-    }
-    // check if user already exist
-    const existedUser = await User.findOne(
-        { $or: [{ email }, { username }] }
-    )
-    if (existedUser) {
-        throw new ApiError(400, "User already exist")
-    }
-    const userData = {
-        fullName, username, email, password
-    }
-    // create user
-    const result = await User.create(userData)
-    // generate access and refresh token
-    const { accessToken } = await generateAccessAndRefreshToken(result?._id)
-    // find the created user in database
-    // HERE is some issue + limitations
-    const createdUser = await User.findById(result._id).select("-password")
-    if (!createdUser) {
-        throw new ApiError(500, "something went wrong when creating user")
-    }
-    // send response
-    return res
-        .status(200)
-        .cookie("accessToken", accessToken, cookieOptions)
-        .json(
-            new ApiResponse(200, createdUser)
+export const registerUser = async (req, res) => {
+    try {
+        const { fullName, username, email, password } = req.body;
+        // check if all data exists. if not throw error
+        if (!fullName || !username || !email || !password) {
+            throw new ApiError(400, "All Fields are Required")
+        }
+
+        // check if username already used
+        const existingUsername = await User.exists({ username })
+        if (existingUsername) {
+            throw new Error("Username already used, Choose a different username");
+        }
+
+        // check if user already exist
+        const existedUser = await User.findOne(
+            { $or: [{ email }] }
         )
-})
+
+        if (existedUser) {
+            throw new ApiError(400, "User already exist")
+        }
+        const userData = {
+            fullName, username, email, password
+        }
+        // create user
+        const result = await User.create(userData)
+        // generate access and refresh token
+        const { accessToken } = await generateAccessAndRefreshToken(result?._id)
+        // find the created user in database
+        // HERE is some issue + limitations
+        const createdUser = await User.findById(result._id).select("-password")
+        if (!createdUser) {
+            throw new ApiError(500, "something went wrong when creating user")
+        }
+        // send response
+        return res
+            .status(200)
+            .cookie("accessToken", accessToken, cookieOptions)
+            .json(
+                new ApiResponse(200, createdUser)
+            )
+    } catch (error) {
+        console.log(error)
+        return res.status(error?.statusCode || 400).json({ message: error.message })
+    }
+}
 
 // sign in user
 export const signInUser = asyncHandler(async (req, res) => {

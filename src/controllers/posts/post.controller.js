@@ -57,6 +57,33 @@ export const getPosts = asyncHandler(async (req, res) => {
         )
 })
 
+// get user's post
+export const getUserPosts = asyncHandler(async (req, res) => {
+    const userId = req.params?.userId
+    if (!isValidObjectId(userId)) {
+        throw new ApiError(400, "Invalid id")
+    }
+    const posts = await Post.aggregate(
+        [
+            {
+                $match: {
+                    owner: new ObjectId(`${userId}`)
+                }
+            },
+            {
+                $sort: {
+                    _id: -1
+                }
+            }
+        ]
+    )
+    res
+        .status(200)
+        .json(
+            new ApiResponse(200, posts, `user's posts`)
+        )
+})
+
 // get a posts stats
 export const getPostStates = asyncHandler(async (req, res) => {
     const id = req.params?.id;

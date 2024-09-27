@@ -7,7 +7,7 @@ import cookieParser from "cookie-parser";
 export const app = express()
 
 app.use(cors({
-    origin: ['*', "http://localhost:5173", "http://localhost:51734"], credentials: true
+    origin: ['*', "http://localhost:5173", "http://localhost:3000"], credentials: true
 }));
 app.use(express.json({ limit: '16kb' }));
 app.use(express.static('public'))
