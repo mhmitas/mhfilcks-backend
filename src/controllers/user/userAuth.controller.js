@@ -50,39 +50,42 @@ export const registerUser = async (req, res) => {
                 new ApiResponse(200, createdUser)
             )
     } catch (error) {
-        console.log(error)
         return res.status(error?.statusCode || 400).json({ message: error.message })
     }
 }
 
 // sign in user
-export const signInUser = asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-        throw new ApiError(400, "email and password is required")
-    }
-    // find user in db with this email
-    const dbUser = await User.findOne({ email })
-    if (!dbUser) {
-        throw new ApiError(404, "user not found")
-    }
-    // verify password
-    const isPasswordCorrect = await dbUser.isPasswordCorrect(password)
-    // console.log({ isPasswordCorrect })
-    if (!isPasswordCorrect) {
-        throw new ApiError(403, "Invalid Password")
-    }
-    // generate Access And RefreshToken
-    const { accessToken } = await generateAccessAndRefreshToken(dbUser?._id)
+export const signInUser = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            throw new ApiError(400, "email and password is required")
+        }
+        // find user in db with this email
+        const dbUser = await User.findOne({ email })
+        if (!dbUser) {
+            throw new ApiError(404, "User not found 😔! Please sign up.")
+        }
+        // verify password
+        const isPasswordCorrect = await dbUser.isPasswordCorrect(password)
+        // console.log({ isPasswordCorrect })
+        if (!isPasswordCorrect) {
+            throw new ApiError(403, "Invalid Password")
+        }
+        // generate Access And RefreshToken
+        const { accessToken } = await generateAccessAndRefreshToken(dbUser?._id)
 
-    const user = await User.findById(dbUser?._id).select("-password -refreshToken")
-    res
-        .status(200)
-        .cookie("accessToken", accessToken, cookieOptions)
-        .json(
-            new ApiResponse(200, user)
-        )
-})
+        const user = await User.findById(dbUser?._id).select("-password -refreshToken")
+        res
+            .status(200)
+            .cookie("accessToken", accessToken, cookieOptions)
+            .json(
+                new ApiResponse(200, user)
+            )
+    } catch (error) {
+        return res.status(error?.statusCode || 400).json({ message: error.message })
+    }
+}
 
 // sign out user
 export const signOutUser = asyncHandler(async (req, res) => {
